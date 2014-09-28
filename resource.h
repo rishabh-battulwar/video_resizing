@@ -15,6 +15,8 @@
 #define IDR_MAINFRAME                   128
 #define ID_MODIFY_IMAGE                 32771
 #define ID_IMAGE_OPEN                   32772
+#define PLAY_INVIDEO_BUTTON_ID			1001
+#define PLAY_OUTVIDEO_BUTTON_ID			1002
 
 // Next default values for new objects
 // 

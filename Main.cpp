@@ -13,13 +13,17 @@
 
 // Include class files
 #include "Image.h"
+#include <vector>
+using namespace std;
 
 #define MAX_LOADSTRING 100
 #define WIDTH 352
 #define HEIGHT 288
 
 // Global Variables:
-MyImage			inImage, outImage;				// image objects
+MyImage	inImage, outImage;				// image objects
+MyImage *inVideo, *outVideo;
+int frames = 0;
 HINSTANCE		hInst;							// current instance
 TCHAR szTitle[MAX_LOADSTRING];					// The title bar text
 TCHAR szWindowClass[MAX_LOADSTRING];			// The title bar text
@@ -40,29 +44,61 @@ int APIENTRY WinMain(HINSTANCE hInstance,
 {
 	MSG msg;
 	HACCEL hAccelTable;
-
+	
 	// Read in the image and its copy
-	float w, h; //Scaling factors
+	float scale_w, scale_h; //Scaling factors
 	char ImagePath[_MAX_PATH];
-	sscanf(lpCmdLine, "%s %f %f", &ImagePath, &w, &h);
-	inImage.setWidth(WIDTH*w);
-	inImage.setHeight(HEIGHT*h);
+	sscanf(lpCmdLine, "%s %f %f", &ImagePath, &scale_w, &scale_h);
+
+	FILE *p_file = NULL;
+	p_file = fopen(ImagePath, "rb");
+	fseek(p_file, 0, SEEK_END);
+	frames = ftell(p_file) / (352 * 288 * 3);
+	fclose(p_file);
+
+	inVideo = new MyImage[frames];
+	outVideo = new MyImage[frames];
+
+	//inImage[0].setWidth(WIDTH);
+	//inImage[0].setHeight(HEIGHT);
+	
+	for (int i = 0; i < frames; i++)
+	{
+		inVideo[i].setWidth(WIDTH);
+		inVideo[i].setHeight(HEIGHT);
+
+		outVideo[i].setWidth(WIDTH*scale_w);
+		outVideo[i].setHeight(HEIGHT*scale_h);
+	}
+
 	if ( strstr(ImagePath, ".rgb" )==NULL )
 	{ 
-		AfxMessageBox( "Image has to be a '.rgb' file\nUsage - Image.exe image.rgb w h");
+		AfxMessageBox( "Image has to be a '.rgb' file\nUsage - Image.exe image.rgb scale_w scale_h");
 		//return FALSE;
 	}
 	else
 	{
-		inImage.setImagePath(ImagePath);
-		if ( !inImage.ReadImage() )
-		{ 
-			AfxMessageBox( "Could not read image\nUsage - Image.exe image.rgb w h");
-			//return FALSE;
+		//inImage[0].setImagePath(ImagePath);
+		//if ( !inImage[0].ReadImage() )
+		//{ 
+		//	AfxMessageBox( "Could not read image\nUsage - Image.exe image.rgb scale_w scale_h");
+		//	//return FALSE;
+		//}
+
+		for (int i = 0; i < frames; i++)
+		{
+			inVideo[i].setImagePath(ImagePath);
+			if (!inVideo[i].ReadImage(i))
+			{
+				AfxMessageBox("Could not read image %d \nUsage - Image.exe image.rgb scale_w scale_h", i);
+				//return FALSE;
+			}
 		}
-		else
-			outImage = inImage;
+		
+		//else
+			//outImage = inImage;
 	}
+	
 
 	// Initialize global strings
 	LoadString(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
@@ -86,8 +122,10 @@ int APIENTRY WinMain(HINSTANCE hInstance,
 			DispatchMessage(&msg);
 		}
 	}
+	
 
 	return msg.wParam;
+
 }
 
 
@@ -143,11 +181,23 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
    hInst = hInstance; // Store instance handle in our global variable
 
-   hWnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-      CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, NULL, NULL, hInstance, NULL);
+   hWnd = CreateWindow(
+	   szWindowClass, 
+	   szTitle, 
+	   WS_OVERLAPPEDWINDOW,
+	   CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, 
+	   NULL, 
+	   NULL, 
+	   hInstance, 
+	   NULL);
 
    if (!hWnd)
    {
+	   MessageBox(NULL,
+		   _T("Call to CreateWindow Failed!"),
+		   _T("Win32 Guided Tour"),
+		   NULL);
+
       return FALSE;
    }
    
@@ -176,6 +226,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	int wmId, wmEvent;
 	PAINTSTRUCT ps;
 	HDC hdc;
+	static HWND hButton;
 	TCHAR szHello[MAX_LOADSTRING];
 	LoadString(hInst, IDS_HELLO, szHello, MAX_LOADSTRING);
 	RECT rt;
@@ -193,7 +244,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				   DialogBox(hInst, (LPCTSTR)IDD_ABOUTBOX, hWnd, (DLGPROC)About);
 				   break;
 				case ID_MODIFY_IMAGE:
-				   outImage.Modify();
+					for (int i = 0; i < frames; i++)
+						outVideo[i].Modify(inVideo[i]);
 				   InvalidateRect(hWnd, &rt, false); 
 				   break;
 				case IDM_EXIT:
@@ -203,6 +255,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				   return DefWindowProc(hWnd, message, wParam, lParam);
 			}
 			break;
+
+		case WM_CREATE:
+			hButton = CreateWindow(TEXT("button"), TEXT("Label"),
+				WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
+				10, 200,
+				50, 20,
+				hWnd, (HMENU)PLAY_INVIDEO_BUTTON_ID,
+				hInst, NULL);
+
+			break;
+
 		case WM_PAINT:
 			{
 				hdc = BeginPaint(hWnd, &ps);
@@ -213,26 +276,35 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				strcpy(text, "\nUpdate program with your code to modify input image");
 				DrawText(hdc, text, strlen(text), &rt, DT_LEFT);
 
-				BITMAPINFO bmi;
+				BITMAPINFO bmi_in, bmi_out;
 				CBitmap bitmap;
-				memset(&bmi,0,sizeof(bmi));
-				bmi.bmiHeader.biSize = sizeof(bmi.bmiHeader);
-				bmi.bmiHeader.biWidth = inImage.getWidth();
-				bmi.bmiHeader.biHeight = -inImage.getHeight();  // Use negative height.  DIB is top-down.
-				bmi.bmiHeader.biPlanes = 1;
-				bmi.bmiHeader.biBitCount = 24;
-				bmi.bmiHeader.biCompression = BI_RGB;
-				bmi.bmiHeader.biSizeImage = inImage.getWidth()*inImage.getHeight();
+				memset(&bmi_in,0,sizeof(bmi_in));
+				bmi_in.bmiHeader.biSize = sizeof(bmi_in.bmiHeader);
+				bmi_in.bmiHeader.biWidth = inVideo[0].getWidth();
+				bmi_in.bmiHeader.biHeight = -inVideo[0].getHeight();  // Use negative height.  DIB is top-down.
+				bmi_in.bmiHeader.biPlanes = 1;
+				bmi_in.bmiHeader.biBitCount = 24;
+				bmi_in.bmiHeader.biCompression = BI_RGB;
+				bmi_in.bmiHeader.biSizeImage = inVideo[0].getWidth()*inVideo[0].getHeight();
+
+				memset(&bmi_out, 0, sizeof(bmi_out));
+				bmi_out.bmiHeader.biSize = sizeof(bmi_out.bmiHeader);
+				bmi_out.bmiHeader.biWidth = outVideo[0].getWidth();
+				bmi_out.bmiHeader.biHeight = -outVideo[0].getHeight();  // Use negative height.  DIB is top-down.
+				bmi_out.bmiHeader.biPlanes = 1;
+				bmi_out.bmiHeader.biBitCount = 24;
+				bmi_out.bmiHeader.biCompression = BI_RGB;
+				bmi_out.bmiHeader.biSizeImage = outVideo[0].getWidth()*outVideo[0].getHeight();
 
 				SetDIBitsToDevice(hdc,
-								  0,100,inImage.getWidth(),inImage.getHeight(),
-								  0,0,0,inImage.getHeight(),
-								  inImage.getImageData(),&bmi,DIB_RGB_COLORS);
+								  0,100,inVideo[0].getWidth(),inVideo[0].getHeight(),
+								  0,0,0,inVideo[0].getHeight(),
+								  inVideo[0].getImageData(),&bmi_in,DIB_RGB_COLORS);
 
 				SetDIBitsToDevice(hdc,
-								  outImage.getWidth()+50,100,outImage.getWidth(),outImage.getHeight(),
-								  0,0,0,outImage.getHeight(),
-								  outImage.getImageData(),&bmi,DIB_RGB_COLORS);
+								  inVideo[0].getWidth()+50,100,outVideo[0].getWidth(),outVideo[0].getHeight(),
+								  0,0,0,outVideo[0].getHeight(),
+								  outVideo[0].getImageData(),&bmi_out,DIB_RGB_COLORS);
 
 
 				EndPaint(hWnd, &ps);

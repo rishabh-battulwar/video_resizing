@@ -34,7 +34,7 @@ private:
 	int		Width;					// Width of Image
 	int		Height;					// Height of Image
 	char	ImagePath[_MAX_PATH];	// Image location
-	char*	Data;					// RGB data of the image
+	unsigned char*	Data;					// RGB data of the image
 
 public:
 	// Constructor
@@ -50,19 +50,23 @@ public:
 	// Reader & Writer functions
 	void	setWidth( const int w)  { Width = w; }; 
 	void	setHeight(const int h) { Height = h; }; 
-	void	setImageData( const char *img ) { Data = (char *)img; };
+	void	setImageData( const char *img ) { Data = (unsigned char *)img; };
 	void	setImagePath( const char *path) { strcpy(ImagePath, path); }
 	int		getWidth() { return Width; };
 	int		getHeight() { return Height; };
-	char*	getImageData() { return Data; };
+	unsigned char*	getImageData() { return Data; };
 	char*	getImagePath() { return ImagePath; }
+	int		getValue(int i, int j, int k)					{ return (int)Data[i* Width * 3 + j * 3 + k]; }
+	void	setValue(const int i, const int j, const int k, const int value){
+		Data[i*Width * 3 + j * 3 + k] = value;
+	}
 
 	// Input Output operations
-	bool	ReadImage();
-	bool	WriteImage();
+	bool	ReadImage(int frame_number);
+	bool	WriteImage(int frame_number);
 
 	// Modifications
-	bool	Modify();
+	bool	Modify(MyImage &inImage);
 
 };
 
