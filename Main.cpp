@@ -14,6 +14,8 @@
 // Include class files
 #include "Image.h"
 #include <vector>
+#include <chrono>
+#include <thread>
 using namespace std;
 
 #define MAX_LOADSTRING 100
@@ -33,6 +35,7 @@ ATOM				MyRegisterClass(HINSTANCE hInstance);
 BOOL				InitInstance(HINSTANCE, int);
 LRESULT CALLBACK	WndProc(HWND, UINT, WPARAM, LPARAM);
 LRESULT CALLBACK	About(HWND, UINT, WPARAM, LPARAM);
+//LRESULT CALLBACK	Render(HWND, UINT, WPARAM, LPARAM);
 
 
 
@@ -243,9 +246,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				case IDM_ABOUT:
 				   DialogBox(hInst, (LPCTSTR)IDD_ABOUTBOX, hWnd, (DLGPROC)About);
 				   break;
+				/*case PLAY_INVIDEO_BUTTON_ID:
+					DialogBox(hInst, (LPCTSTR)IDD_ABOUTBOX, hWnd, (DLGPROC)Render);
+					break;*/
 				case ID_MODIFY_IMAGE:
-					for (int i = 0; i < frames; i++)
-						outVideo[i].Modify(inVideo[i]);
+					//for (int i = 0; i < frames; i++)
+						outVideo[400].Modify(inVideo[400]);
 				   InvalidateRect(hWnd, &rt, false); 
 				   break;
 				case IDM_EXIT:
@@ -257,13 +263,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 
 		case WM_CREATE:
-			hButton = CreateWindow(TEXT("button"), TEXT("Label"),
+			hButton = CreateWindow(TEXT("button"), TEXT("Play"),
 				WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
-				10, 200,
+				140, 40,
 				50, 20,
 				hWnd, (HMENU)PLAY_INVIDEO_BUTTON_ID,
 				hInst, NULL);
-
 			break;
 
 		case WM_PAINT:
@@ -276,36 +281,60 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				strcpy(text, "\nUpdate program with your code to modify input image");
 				DrawText(hdc, text, strlen(text), &rt, DT_LEFT);
 
-				BITMAPINFO bmi_in, bmi_out;
+				//std::chrono::milliseconds interval(40);
+				//for (int i = 0; i < frames; i++)
+				//{
+				//	BITMAPINFO bmi_in;
+				//	CBitmap bitmap;
+				//	memset(&bmi_in, 0, sizeof(bmi_in));
+				//	bmi_in.bmiHeader.biSize = sizeof(bmi_in.bmiHeader);
+				//	bmi_in.bmiHeader.biWidth = inVideo[i].getWidth();
+				//	bmi_in.bmiHeader.biHeight = -inVideo[i].getHeight();  // Use negative height.  DIB is top-down.
+				//	bmi_in.bmiHeader.biPlanes = 1;
+				//	bmi_in.bmiHeader.biBitCount = 24;
+				//	bmi_in.bmiHeader.biCompression = BI_RGB;
+				//	bmi_in.bmiHeader.biSizeImage = inVideo[i].getWidth()*inVideo[i].getHeight();
+
+				//	SetDIBitsToDevice(hdc,
+				//		0, 100, inVideo[i].getWidth(), inVideo[i].getHeight(),
+				//		0, 0, 0, inVideo[i].getHeight(),
+				//		inVideo[i].getImageData(), &bmi_in, DIB_RGB_COLORS);
+
+				//	std::this_thread::sleep_for(interval);
+				//}
+				
+				BITMAPINFO bmi_in;
 				CBitmap bitmap;
-				memset(&bmi_in,0,sizeof(bmi_in));
+				memset(&bmi_in, 0, sizeof(bmi_in));
 				bmi_in.bmiHeader.biSize = sizeof(bmi_in.bmiHeader);
-				bmi_in.bmiHeader.biWidth = inVideo[0].getWidth();
-				bmi_in.bmiHeader.biHeight = -inVideo[0].getHeight();  // Use negative height.  DIB is top-down.
+				bmi_in.bmiHeader.biWidth = inVideo[400].getWidth();
+				bmi_in.bmiHeader.biHeight = -inVideo[400].getHeight();  // Use negative height.  DIB is top-down.
 				bmi_in.bmiHeader.biPlanes = 1;
 				bmi_in.bmiHeader.biBitCount = 24;
 				bmi_in.bmiHeader.biCompression = BI_RGB;
-				bmi_in.bmiHeader.biSizeImage = inVideo[0].getWidth()*inVideo[0].getHeight();
+				bmi_in.bmiHeader.biSizeImage = inVideo[400].getWidth()*inVideo[400].getHeight();
 
+				SetDIBitsToDevice(hdc,
+					0, 100, inVideo[400].getWidth(), inVideo[400].getHeight(),
+					0, 0, 0, inVideo[400].getHeight(),
+					inVideo[400].getImageData(), &bmi_in, DIB_RGB_COLORS);
+
+
+				BITMAPINFO bmi_out;
+				//CBitmap bitmap;
 				memset(&bmi_out, 0, sizeof(bmi_out));
 				bmi_out.bmiHeader.biSize = sizeof(bmi_out.bmiHeader);
-				bmi_out.bmiHeader.biWidth = outVideo[0].getWidth();
-				bmi_out.bmiHeader.biHeight = -outVideo[0].getHeight();  // Use negative height.  DIB is top-down.
+				bmi_out.bmiHeader.biWidth = outVideo[400].getWidth();
+				bmi_out.bmiHeader.biHeight = -outVideo[400].getHeight();  // Use negative height.  DIB is top-down.
 				bmi_out.bmiHeader.biPlanes = 1;
 				bmi_out.bmiHeader.biBitCount = 24;
 				bmi_out.bmiHeader.biCompression = BI_RGB;
-				bmi_out.bmiHeader.biSizeImage = outVideo[0].getWidth()*outVideo[0].getHeight();
+				bmi_out.bmiHeader.biSizeImage = outVideo[400].getWidth()*outVideo[400].getHeight();
 
 				SetDIBitsToDevice(hdc,
-								  0,100,inVideo[0].getWidth(),inVideo[0].getHeight(),
-								  0,0,0,inVideo[0].getHeight(),
-								  inVideo[0].getImageData(),&bmi_in,DIB_RGB_COLORS);
-
-				SetDIBitsToDevice(hdc,
-								  inVideo[0].getWidth()+50,100,outVideo[0].getWidth(),outVideo[0].getHeight(),
-								  0,0,0,outVideo[0].getHeight(),
-								  outVideo[0].getImageData(),&bmi_out,DIB_RGB_COLORS);
-
+					inVideo[0].getWidth() + 50, 100, outVideo[400].getWidth(), outVideo[400].getHeight(),
+					0, 0, 0, outVideo[400].getHeight(),
+					outVideo[400].getImageData(), &bmi_out, DIB_RGB_COLORS);
 
 				EndPaint(hWnd, &ps);
 			}
@@ -320,25 +349,96 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 
-
-
 // Mesage handler for about box.
+//LRESULT CALLBACK Render(HWND hWin, UINT message, WPARAM wParam, LPARAM lParam)
+//{
+//	PAINTSTRUCT ps;
+//	HDC hdc2;
+//	RECT rt;
+//	GetClientRect(hWin, &rt);
+//	switch (message)
+//	{
+//		case WM_INITDIALOG:
+//			return TRUE;
+//
+//		case WM_COMMAND:
+//			if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
+//			{
+//				EndDialog(hWin, LOWORD(wParam));
+//				return TRUE;
+//			}
+//			break;
+//
+//		case WM_PAINT:
+//			{
+//				hdc2 = BeginPaint(hWin, &ps);
+//				// TO DO: Add any drawing code here...
+//				char text[1000];
+//				strcpy(text, "Original image (Left)  Image after modification (Right)\n");
+//				DrawText(hdc2, text, strlen(text), &rt, DT_LEFT);
+//				strcpy(text, "\nUpdate program with your code to modify input image");
+//				DrawText(hdc2, text, strlen(text), &rt, DT_LEFT);
+//
+//				std::chrono::milliseconds interval(40);
+//				for (int i = 0; i < frames; i++)
+//				{
+//					BITMAPINFO bmi_in;
+//					CBitmap bitmap;
+//					memset(&bmi_in, 0, sizeof(bmi_in));
+//					bmi_in.bmiHeader.biSize = sizeof(bmi_in.bmiHeader);
+//					bmi_in.bmiHeader.biWidth = inVideo[i].getWidth();
+//					bmi_in.bmiHeader.biHeight = -inVideo[i].getHeight();  // Use negative height.  DIB is top-down.
+//					bmi_in.bmiHeader.biPlanes = 1;
+//					bmi_in.bmiHeader.biBitCount = 24;
+//					bmi_in.bmiHeader.biCompression = BI_RGB;
+//					bmi_in.bmiHeader.biSizeImage = inVideo[i].getWidth()*inVideo[i].getHeight();
+//
+//					SetDIBitsToDevice(hdc2,
+//						0, 100, inVideo[i].getWidth(), inVideo[i].getHeight(),
+//						0, 0, 0, inVideo[i].getHeight(),
+//						inVideo[i].getImageData(), &bmi_in, DIB_RGB_COLORS);
+//
+//					std::this_thread::sleep_for(interval);
+//				}
+//				
+//				BITMAPINFO bmi_out;
+//				CBitmap bitmap;
+//				memset(&bmi_out, 0, sizeof(bmi_out));
+//				bmi_out.bmiHeader.biSize = sizeof(bmi_out.bmiHeader);
+//				bmi_out.bmiHeader.biWidth = outVideo[0].getWidth();
+//				bmi_out.bmiHeader.biHeight = -outVideo[0].getHeight();  // Use negative height.  DIB is top-down.
+//				bmi_out.bmiHeader.biPlanes = 1;
+//				bmi_out.bmiHeader.biBitCount = 24;
+//				bmi_out.bmiHeader.biCompression = BI_RGB;
+//				bmi_out.bmiHeader.biSizeImage = outVideo[0].getWidth()*outVideo[0].getHeight();
+//
+//				SetDIBitsToDevice(hdc2,
+//					inVideo[0].getWidth() + 50, 100, outVideo[0].getWidth(), outVideo[0].getHeight(),
+//					0, 0, 0, outVideo[0].getHeight(),
+//					outVideo[0].getImageData(), &bmi_out, DIB_RGB_COLORS);
+//
+//				EndPaint(hWin, &ps);
+//			}
+//			break;
+//	}
+//    return FALSE;
+//}
+
 LRESULT CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	switch (message)
 	{
-		case WM_INITDIALOG:
-				return TRUE;
+	case WM_INITDIALOG:
+		return TRUE;
 
-		case WM_COMMAND:
-			if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL) 
-			{
-				EndDialog(hDlg, LOWORD(wParam));
-				return TRUE;
-			}
-			break;
+	case WM_COMMAND:
+		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
+		{
+			EndDialog(hDlg, LOWORD(wParam));
+			return TRUE;
+		}
+		break;
 	}
-    return FALSE;
+	return FALSE;
 }
-
 

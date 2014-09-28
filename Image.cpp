@@ -270,12 +270,15 @@ bool MyImage::Modify(MyImage &inImage)
 		for (int j = 0; j < Col2; j++)
 		{
 			valx_row = (1.0 * i / Row2)*range + (-boundary);
-			valy_row = atan(valx_row/3);
+			valy_row = atan(valx_row/2);
 			x = (valy_row / atanrange)*Row1 + (Row1/2);
 
-			valx_col = (1.0 * j / Col2)*range + (-boundary);
-			valy_col = atan(valx_col/3);
-			y = (valy_col / atanrange)*Col1 + (Col1/2);
+			/*valx_col = (1.0 * j / Col2)*range + (-boundary);
+			valy_col = atan(valx_col/1.5);
+			y = (valy_col / atanrange)*Col1 + (Col1/2);*/
+
+			y = inImage_copy.getWidth() * (1.0 * j / Width);	//Scaling in x direction
+
 
 			X = floor(x);
 			Y = floor(y);
@@ -285,13 +288,7 @@ bool MyImage::Modify(MyImage &inImage)
 
 			for (int k = 0; k < 3; k++)
 			{
-				first = inImage_copy.getValue(X, Y, k);
-				second = inImage_copy.getValue(X, Y + 1, k);
-				one = (inImage_copy.getValue(X, Y, k)*(1.0 - a)*(1.0 - b));
-				two = (inImage_copy.getValue(X, Y + 1, k)*(a)*(1.0 - b));
-				three = (inImage_copy.getValue(X + 1, Y, k)*(1.0 - a)*(b));
-				four = (inImage_copy.getValue(X + 1, Y + 1, k)*(a)*(b));
-
+				
 				value = (inImage_copy.getValue(X, Y, k)*(1.0 - a)*(1.0 - b))
 					+ (inImage_copy.getValue(X, Y + 1, k)*(a)*(1.0 - b))
 					+ (inImage_copy.getValue(X + 1, Y, k)*(1.0 - a)*(b))
