@@ -17,6 +17,7 @@
 #define ID_IMAGE_OPEN                   32772
 #define PLAY_INVIDEO_BUTTON_ID			1001
 #define PLAY_OUTVIDEO_BUTTON_ID			1002
+#define READ_INPUT_VIDEO				1003
 
 // Next default values for new objects
 // 

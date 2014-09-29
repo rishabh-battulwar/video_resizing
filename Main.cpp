@@ -25,6 +25,10 @@ using namespace std;
 // Global Variables:
 MyImage	inImage, outImage;				// image objects
 MyImage *inVideo, *outVideo;
+float scale_w, scale_h; //Scaling factors
+int frame_rate, anti_alias, option;
+char ImagePath[_MAX_PATH];
+
 int frames = 0;
 HINSTANCE		hInst;							// current instance
 TCHAR szTitle[MAX_LOADSTRING];					// The title bar text
@@ -49,9 +53,7 @@ int APIENTRY WinMain(HINSTANCE hInstance,
 	HACCEL hAccelTable;
 	
 	// Read in the image and its copy
-	float scale_w, scale_h; //Scaling factors
-	char ImagePath[_MAX_PATH];
-	sscanf(lpCmdLine, "%s %f %f", &ImagePath, &scale_w, &scale_h);
+	sscanf(lpCmdLine, "%s %f %f %d %d %d", &ImagePath, &scale_w, &scale_h, &frame_rate, &anti_alias, &option);
 
 	FILE *p_file = NULL;
 	p_file = fopen(ImagePath, "rb");
@@ -70,8 +72,8 @@ int APIENTRY WinMain(HINSTANCE hInstance,
 		inVideo[i].setWidth(WIDTH);
 		inVideo[i].setHeight(HEIGHT);
 
-		outVideo[i].setWidth(WIDTH*scale_w);
-		outVideo[i].setHeight(HEIGHT*scale_h);
+		outVideo[i].setWidth((int)(1.0*WIDTH*scale_w));
+		outVideo[i].setHeight((int)(1.0*HEIGHT*scale_h));
 	}
 
 	if ( strstr(ImagePath, ".rgb" )==NULL )
@@ -81,13 +83,6 @@ int APIENTRY WinMain(HINSTANCE hInstance,
 	}
 	else
 	{
-		//inImage[0].setImagePath(ImagePath);
-		//if ( !inImage[0].ReadImage() )
-		//{ 
-		//	AfxMessageBox( "Could not read image\nUsage - Image.exe image.rgb scale_w scale_h");
-		//	//return FALSE;
-		//}
-
 		for (int i = 0; i < frames; i++)
 		{
 			inVideo[i].setImagePath(ImagePath);
@@ -97,11 +92,10 @@ int APIENTRY WinMain(HINSTANCE hInstance,
 				//return FALSE;
 			}
 		}
-		
-		//else
-			//outImage = inImage;
 	}
 	
+	for (int i = 0; i < frames; i++)
+		outVideo[i].Modify(inVideo[i], scale_w, scale_h, anti_alias, option);
 
 	// Initialize global strings
 	LoadString(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
@@ -130,7 +124,6 @@ int APIENTRY WinMain(HINSTANCE hInstance,
 	return msg.wParam;
 
 }
-
 
 
 //
@@ -221,6 +214,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 //  WM_DESTROY	- post a quit message and return
 //
 //
+
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 // TO DO: part useful to render video frames, may place your own code here in this function
@@ -246,12 +240,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				case IDM_ABOUT:
 				   DialogBox(hInst, (LPCTSTR)IDD_ABOUTBOX, hWnd, (DLGPROC)About);
 				   break;
-				/*case PLAY_INVIDEO_BUTTON_ID:
-					DialogBox(hInst, (LPCTSTR)IDD_ABOUTBOX, hWnd, (DLGPROC)Render);
-					break;*/
 				case ID_MODIFY_IMAGE:
-					//for (int i = 0; i < frames; i++)
-						outVideo[400].Modify(inVideo[400]);
+					for (int i = 0; i < frames; i++)
+						outVideo[i].Modify(inVideo[i], scale_w, scale_h, anti_alias, option);
 				   InvalidateRect(hWnd, &rt, false); 
 				   break;
 				case IDM_EXIT:
@@ -262,79 +253,88 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			}
 			break;
 
-		case WM_CREATE:
-			hButton = CreateWindow(TEXT("button"), TEXT("Play"),
-				WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
-				140, 40,
-				50, 20,
-				hWnd, (HMENU)PLAY_INVIDEO_BUTTON_ID,
-				hInst, NULL);
-			break;
-
+		
 		case WM_PAINT:
 			{
 				hdc = BeginPaint(hWnd, &ps);
 				// TO DO: Add any drawing code here...
 				char text[1000];
-				strcpy(text, "Original image (Left)  Image after modification (Right)\n");
+				strcpy(text, "\tOriginal video (Left)  Video after modification (Right)\n");
 				DrawText(hdc, text, strlen(text), &rt, DT_LEFT);
-				strcpy(text, "\nUpdate program with your code to modify input image");
+				strcpy(text, "\n\n\tUse Modify method from the menu to see the change\n");
 				DrawText(hdc, text, strlen(text), &rt, DT_LEFT);
 
-				//std::chrono::milliseconds interval(40);
-				//for (int i = 0; i < frames; i++)
-				//{
-				//	BITMAPINFO bmi_in;
-				//	CBitmap bitmap;
-				//	memset(&bmi_in, 0, sizeof(bmi_in));
-				//	bmi_in.bmiHeader.biSize = sizeof(bmi_in.bmiHeader);
-				//	bmi_in.bmiHeader.biWidth = inVideo[i].getWidth();
-				//	bmi_in.bmiHeader.biHeight = -inVideo[i].getHeight();  // Use negative height.  DIB is top-down.
-				//	bmi_in.bmiHeader.biPlanes = 1;
-				//	bmi_in.bmiHeader.biBitCount = 24;
-				//	bmi_in.bmiHeader.biCompression = BI_RGB;
-				//	bmi_in.bmiHeader.biSizeImage = inVideo[i].getWidth()*inVideo[i].getHeight();
+				int fps = (int)(1000 * 1.0 / frame_rate);
+				std::chrono::milliseconds interval(fps);
+				for (int i = 0; i < frames; i++)
+				{
+					//BITMAPINFO bmi_in;
+					//CBitmap bitmap;
+					//memset(&bmi_in, 0, sizeof(bmi_in));
+					//bmi_in.bmiHeader.biSize = sizeof(bmi_in.bmiHeader);
+					//bmi_in.bmiHeader.biWidth = inVideo[i].getWidth();
+					//bmi_in.bmiHeader.biHeight = -inVideo[i].getHeight();  // Use negative height.  DIB is top-down.
+					//bmi_in.bmiHeader.biPlanes = 1;
+					//bmi_in.bmiHeader.biBitCount = 24;
+					//bmi_in.bmiHeader.biCompression = BI_RGB;
+					//bmi_in.bmiHeader.biSizeImage = inVideo[i].getWidth()*inVideo[i].getHeight();
 
-				//	SetDIBitsToDevice(hdc,
-				//		0, 100, inVideo[i].getWidth(), inVideo[i].getHeight(),
-				//		0, 0, 0, inVideo[i].getHeight(),
-				//		inVideo[i].getImageData(), &bmi_in, DIB_RGB_COLORS);
+					BITMAPINFO bmi_out;
+					CBitmap bitmap;
+					memset(&bmi_out, 0, sizeof(bmi_out));
+					bmi_out.bmiHeader.biSize = sizeof(bmi_out.bmiHeader);
+					bmi_out.bmiHeader.biWidth = outVideo[i].getWidth();
+					bmi_out.bmiHeader.biHeight = -outVideo[i].getHeight();  // Use negative height.  DIB is top-down.
+					bmi_out.bmiHeader.biPlanes = 1;
+					bmi_out.bmiHeader.biBitCount = 24;
+					bmi_out.bmiHeader.biCompression = BI_RGB;
+					bmi_out.bmiHeader.biSizeImage = outVideo[i].getWidth()*outVideo[i].getHeight();
 
-				//	std::this_thread::sleep_for(interval);
-				//}
+					/*SetDIBitsToDevice(hdc,
+						0, 100, inVideo[i].getWidth(), inVideo[i].getHeight(),
+						0, 0, 0, inVideo[i].getHeight(),
+						inVideo[i].getImageData(), &bmi_in, DIB_RGB_COLORS);*/
+
+					SetDIBitsToDevice(hdc,
+						inVideo[0].getWidth() + 50, 100, outVideo[i].getWidth(), outVideo[i].getHeight(),
+						0, 0, 0, outVideo[i].getHeight(),
+						outVideo[i].getImageData(), &bmi_out, DIB_RGB_COLORS);
+
+					std::this_thread::sleep_for(interval);
+				}
 				
-				BITMAPINFO bmi_in;
-				CBitmap bitmap;
-				memset(&bmi_in, 0, sizeof(bmi_in));
-				bmi_in.bmiHeader.biSize = sizeof(bmi_in.bmiHeader);
-				bmi_in.bmiHeader.biWidth = inVideo[400].getWidth();
-				bmi_in.bmiHeader.biHeight = -inVideo[400].getHeight();  // Use negative height.  DIB is top-down.
-				bmi_in.bmiHeader.biPlanes = 1;
-				bmi_in.bmiHeader.biBitCount = 24;
-				bmi_in.bmiHeader.biCompression = BI_RGB;
-				bmi_in.bmiHeader.biSizeImage = inVideo[400].getWidth()*inVideo[400].getHeight();
-
-				SetDIBitsToDevice(hdc,
-					0, 100, inVideo[400].getWidth(), inVideo[400].getHeight(),
-					0, 0, 0, inVideo[400].getHeight(),
-					inVideo[400].getImageData(), &bmi_in, DIB_RGB_COLORS);
-
-
-				BITMAPINFO bmi_out;
+				//BITMAPINFO bmi_in;
 				//CBitmap bitmap;
-				memset(&bmi_out, 0, sizeof(bmi_out));
-				bmi_out.bmiHeader.biSize = sizeof(bmi_out.bmiHeader);
-				bmi_out.bmiHeader.biWidth = outVideo[400].getWidth();
-				bmi_out.bmiHeader.biHeight = -outVideo[400].getHeight();  // Use negative height.  DIB is top-down.
-				bmi_out.bmiHeader.biPlanes = 1;
-				bmi_out.bmiHeader.biBitCount = 24;
-				bmi_out.bmiHeader.biCompression = BI_RGB;
-				bmi_out.bmiHeader.biSizeImage = outVideo[400].getWidth()*outVideo[400].getHeight();
+				//memset(&bmi_in, 0, sizeof(bmi_in));
+				//bmi_in.bmiHeader.biSize = sizeof(bmi_in.bmiHeader);
+				//bmi_in.bmiHeader.biWidth = inVideo[400].getWidth();
+				//bmi_in.bmiHeader.biHeight = -inVideo[400].getHeight();  // Use negative height.  DIB is top-down.
+				//bmi_in.bmiHeader.biPlanes = 1;
+				//bmi_in.bmiHeader.biBitCount = 24;
+				//bmi_in.bmiHeader.biCompression = BI_RGB;
+				//bmi_in.bmiHeader.biSizeImage = inVideo[400].getWidth()*inVideo[400].getHeight();
 
-				SetDIBitsToDevice(hdc,
-					inVideo[0].getWidth() + 50, 100, outVideo[400].getWidth(), outVideo[400].getHeight(),
-					0, 0, 0, outVideo[400].getHeight(),
-					outVideo[400].getImageData(), &bmi_out, DIB_RGB_COLORS);
+				//SetDIBitsToDevice(hdc,
+				//	0, 100, inVideo[400].getWidth(), inVideo[400].getHeight(),
+				//	0, 0, 0, inVideo[400].getHeight(),
+				//	inVideo[400].getImageData(), &bmi_in, DIB_RGB_COLORS);
+
+
+				//BITMAPINFO bmi_out;
+				////CBitmap bitmap;
+				//memset(&bmi_out, 0, sizeof(bmi_out));
+				//bmi_out.bmiHeader.biSize = sizeof(bmi_out.bmiHeader);
+				//bmi_out.bmiHeader.biWidth = outVideo[400].getWidth();
+				//bmi_out.bmiHeader.biHeight = -outVideo[400].getHeight();  // Use negative height.  DIB is top-down.
+				//bmi_out.bmiHeader.biPlanes = 1;
+				//bmi_out.bmiHeader.biBitCount = 24;
+				//bmi_out.bmiHeader.biCompression = BI_RGB;
+				//bmi_out.bmiHeader.biSizeImage = outVideo[400].getWidth()*outVideo[400].getHeight();
+
+				//SetDIBitsToDevice(hdc,
+				//	inVideo[0].getWidth() + 50, 100, outVideo[400].getWidth(), outVideo[400].getHeight(),
+				//	0, 0, 0, outVideo[400].getHeight(),
+				//	outVideo[400].getImageData(), &bmi_out, DIB_RGB_COLORS);
 
 				EndPaint(hWnd, &ps);
 			}

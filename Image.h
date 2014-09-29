@@ -57,7 +57,7 @@ public:
 	unsigned char*	getImageData() { return Data; };
 	char*	getImagePath() { return ImagePath; }
 	int		getValue(int i, int j, int k)					{ return (int)Data[i* Width * 3 + j * 3 + k]; }
-	void	setValue(const int i, const int j, const int k, const int value){
+	void	setValue(int i, int j, int k, int value){
 		Data[i*Width * 3 + j * 3 + k] = value;
 	}
 
@@ -66,7 +66,7 @@ public:
 	bool	WriteImage(int frame_number);
 
 	// Modifications
-	bool	Modify(MyImage &inImage);
+	bool	Modify(MyImage &inImage, float sw, float sh, int anti_alias, int option);
 
 };
 
